@@ -8,14 +8,6 @@ local LP = P.LocalPlayer
 
 local DB = false
 
-game.StarterGui:SetCore("SendNotification", {
-	Title = "Notification",
-	Text = "Please Subscribe To Psygen On Youtube" ,
-	Button1 = "Ok",
-	Button2 = "Shut Up",
-	Duration = math.huge
-})
-
 --//Loop\\--
 while task.wait() do
 	if not getgenv().Toggle then
