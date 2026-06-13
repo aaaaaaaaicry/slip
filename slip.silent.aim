@@ -1,0 +1,89 @@
+-- Roblox Silent Aim (Mobile Supported)
+-- Place in a LocalScript inside StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+local SETTINGS = {
+    Enabled = true,
+    MaxDistance = 250,          -- studs
+    FOV = 120,                  -- degrees (full screen for mobile)
+    Smoothness = 0.25,          -- 0 = instant, 1 = very slow
+    HitChance = 95,             -- percentage
+    TargetPart = "Head"         -- "Head", "HumanoidRootPart", "UpperTorso"
+}
+
+-- Get valid targets (other players)
+local function GetTargets()
+    local targets = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            local part = player.Character:FindFirstChild(SETTINGS.TargetPart)
+            if part then
+                table.insert(targets, part)
+            end
+        end
+    end
+    return targets
+end
+
+-- Get closest target to mouse/crosshair (on mobile: camera center)
+local function GetClosestTarget()
+    local targets = GetTargets()
+    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    local closest = nil
+    local closestAngle = SETTINGS.FOV
+    
+    for _, target in ipairs(targets) do
+        local screenPoint, onScreen = Camera:WorldToViewportPoint(target.Position)
+        if onScreen then
+            local delta = (Vector2.new(screenPoint.X, screenPoint.Y) - center).Magnitude
+            local angle = math.deg(math.atan2(delta, Camera.Focus.Distance))
+            if angle < closestAngle then
+                closestAngle = angle
+                closest = target
+            end
+        end
+    end
+    return closest
+end
+
+-- Random miss based on HitChance
+local function ShouldHit()
+    return math.random(1, 100) <= SETTINGS.HitChance
+end
+
+-- Smooth movement
+local function SmoothCFrame(current, target, alpha)
+    return current:Lerp(target, alpha)
+end
+
+-- Silent Aim main loop
+RunService.RenderStepped:Connect(function()
+    if not SETTINGS.Enabled then return end
+    
+    local targetPart = GetClosestTarget()
+    if targetPart and ShouldHit() then
+        local targetPos = targetPart.Position
+        local cameraPos = Camera.CFrame.Position
+        local direction = (targetPos - cameraPos).Unit
+        local targetCFrame = CFrame.new(cameraPos, cameraPos + direction)
+        
+        -- Apply smoothing
+        local newCFrame = SmoothCFrame(Camera.CFrame, targetCFrame, SETTINGS.Smoothness)
+        Camera.CFrame = newCFrame
+    end
+end)
+
+-- Mobile tap-to-enable (simple toggle on screen tap)
+UserInputService.TouchTapInWorld:Connect(function()
+    SETTINGS.Enabled = not SETTINGS.Enabled
+end)
+
+-- Optional: print status to console
+print("Silent Aim loaded. Enabled:", SETTINGS.Enabled)
