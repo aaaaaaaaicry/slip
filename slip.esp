@@ -1,4 +1,4 @@
-local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/linemaster2/esp-library/main/library.lua"))();
+local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/aaaaaaaaicry/slip/refs/heads/main/slip.esp.master"))();
 
 ESP.Enabled = true;
 
