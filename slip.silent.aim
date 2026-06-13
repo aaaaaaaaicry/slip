@@ -1,30 +1,52 @@
--- Roblox Silent Aim (Mobile Supported)
--- Place in a LocalScript inside StarterPlayerScripts
+-- Roblox Silent Aim (100% Hit Chance, FOV, Team Check, Wall Check)
+-- Place in LocalScript inside StarterPlayerScripts
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
 
 local SETTINGS = {
     Enabled = true,
-    MaxDistance = 250,          -- studs
-    FOV = 120,                  -- degrees (full screen for mobile)
-    Smoothness = 0.25,          -- 0 = instant, 1 = very slow
-    HitChance = 95,             -- percentage
+    FOV = 120,                  -- degrees (120 = full screen)
+    TeamCheck = false,           -- true = ignore teammates
+    WallCheck = true,           -- true = only target if visible
     TargetPart = "Head"         -- "Head", "HumanoidRootPart", "UpperTorso"
 }
 
--- Get valid targets (other players)
+-- Check if part is visible through walls
+local function IsVisible(part)
+    if not SETTINGS.WallCheck then return true end
+    local origin = Camera.CFrame.Position
+    local direction = (part.Position - origin).Unit
+    local ray = Ray.new(origin, direction * (part.Position - origin).Magnitude)
+    local hit, position = workspace:FindPartOnRay(ray, LocalPlayer.Character)
+    local hitPart = hit
+    if hitPart then
+        local hitDescendant = hitPart:IsDescendantOf(part.Parent)
+        return hitDescendant
+    end
+    return false
+end
+
+-- Get valid targets
 local function GetTargets()
     local targets = {}
+    local localTeam = LocalPlayer.Team
+    
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local part = player.Character:FindFirstChild(SETTINGS.TargetPart)
-            if part then
+        if player == LocalPlayer then continue end
+        
+        -- Team check
+        if SETTINGS.TeamCheck and localTeam and player.Team == localTeam then
+            continue
+        end
+        
+        local char = player.Character
+        if char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
+            local part = char:FindFirstChild(SETTINGS.TargetPart)
+            if part and IsVisible(part) then
                 table.insert(targets, part)
             end
         end
@@ -32,8 +54,8 @@ local function GetTargets()
     return targets
 end
 
--- Get closest target to mouse/crosshair (on mobile: camera center)
-local function GetClosestTarget()
+-- Get closest target to camera center (FOV check)
+local function GetClosestTargetInFOV()
     local targets = GetTargets()
     local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     local closest = nil
@@ -53,37 +75,33 @@ local function GetClosestTarget()
     return closest
 end
 
--- Random miss based on HitChance
-local function ShouldHit()
-    return math.random(1, 100) <= SETTINGS.HitChance
-end
+-- Silent aim: modify mouse hit position without moving camera
+local OriginalMouseBehaviour = nil
+local Mouse = LocalPlayer:GetMouse()
 
--- Smooth movement
-local function SmoothCFrame(current, target, alpha)
-    return current:Lerp(target, alpha)
-end
-
--- Silent Aim main loop
-RunService.RenderStepped:Connect(function()
-    if not SETTINGS.Enabled then return end
+-- Override mouse.Target/Hit for silent aim
+local function SetupSilentAim()
+    local mt = getrawmetatable(game)
+    local oldNamecall = mt.__namecall
+    setreadonly(mt, false)
     
-    local targetPart = GetClosestTarget()
-    if targetPart and ShouldHit() then
-        local targetPos = targetPart.Position
-        local cameraPos = Camera.CFrame.Position
-        local direction = (targetPos - cameraPos).Unit
-        local targetCFrame = CFrame.new(cameraPos, cameraPos + direction)
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local targetPart = GetClosestTargetInFOV()
         
-        -- Apply smoothing
-        local newCFrame = SmoothCFrame(Camera.CFrame, targetCFrame, SETTINGS.Smoothness)
-        Camera.CFrame = newCFrame
-    end
-end)
+        if SETTINGS.Enabled and targetPart and method == "Hit" and self == Mouse then
+            -- Return silent aim hit position
+            return targetPart.CFrame.Position
+        end
+        
+        return oldNamecall(self, ...)
+    end)
+    
+    setreadonly(mt, true)
+end
 
--- Mobile tap-to-enable (simple toggle on screen tap)
-UserInputService.TouchTapInWorld:Connect(function()
-    SETTINGS.Enabled = not SETTINGS.Enabled
-end)
+-- Execute setup
+pcall(SetupSilentAim)
 
--- Optional: print status to console
-print("Silent Aim loaded. Enabled:", SETTINGS.Enabled)
+-- Optional: print status
+print("Silent Aim loaded (100% hit chance, FOV, team check, wall check)")
