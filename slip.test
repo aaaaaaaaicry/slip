@@ -1,7 +1,7 @@
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/aaaaaaaaicry/slip/refs/heads/main/slip.ui"))()
 
 local Window = Library:Window({
-    Name = "Example Hub",
+    Name = "Slip.wtf",
     Size = UDim2.new(0, 500, 0, 300),
     FadeSpeed = 0.25
 })
@@ -152,4 +152,4 @@ Library:CheckForAutoLoad()
 Watermark:SetVisible(false)
 KeybindList:SetVisible(false)
 
-Library:Notification("Welcome!", "Example Hub loaded.", 5)
+Library:Notification("Welcome!", "Slip.wtf loaded.", 5)
