@@ -1,24 +1,17 @@
 local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/linemaster2/esp-library/main/library.lua"))();
 
---// Master switch
 ESP.Enabled = true;
 
---// Enable boxes
 ESP.ShowBox = true;
 
---// Set the box type to corner
 ESP.BoxType = "Corner Box Esp";
 
---// Enable names
 ESP.ShowName = true;
 
---// Enable Healhbar
 ESP.ShowHealth = true;
 
---// Enable tracers
 ESP.ShowTracer = true;
 
---// Enable Distance
 ESP.ShowDistance = true;
 
 --[[
